@@ -1,0 +1,57 @@
+[
+  {
+    "slug": "ai-rewriter",
+    "title": "AI Rewriter",
+    "icon": "✍️",
+    "description": "Réécrire ton texte instantanément selon le ton choisi",
+    "longDescription": "Je transforme ton texte selon le ton voulu : professionnel, amical, romantique ou humoristique. Je préserve le sens tout en adaptant le style.",
+    "api": "/api/rewrite",
+    "category": "text",
+    "featured": true,
+    "gradient": "from-purple-500 to-pink-500"
+  },
+  {
+    "slug": "ai-summarizer",
+    "title": "AI Summarizer",
+    "icon": "🧠",
+    "description": "Résumer n'importe quel texte en quelques secondes",
+    "longDescription": "Je résume tes articles, vidéos YouTube ou documents en points clés et synthèse complète.",
+    "api": "/api/summarize",
+    "category": "text",
+    "featured": false,
+    "gradient": "from-blue-500 to-cyan-500"
+  },
+  {
+    "slug": "ai-translator",
+    "title": "AI Translator",
+    "icon": "💬",
+    "description": "Traduire avec adaptation tonale intelligente",
+    "longDescription": "Je traduis ton texte en adaptant le ton selon le contexte : professionnel, détendu ou commercial.",
+    "api": "/api/translate",
+    "category": "text",
+    "featured": false,
+    "gradient": "from-green-500 to-emerald-500"
+  },
+  {
+    "slug": "ai-motivation",
+    "title": "Daily Motivation",
+    "icon": "💭",
+    "description": "Citation motivante personnalisée chaque jour",
+    "longDescription": "Je génère une citation inspirante adaptée à ton humeur du moment.",
+    "api": "/api/motivate",
+    "category": "lifestyle",
+    "featured": false,
+    "gradient": "from-orange-500 to-red-500"
+  },
+  {
+    "slug": "ai-background",
+    "title": "Background Remover",
+    "icon": "🎨",
+    "description": "Supprimer le fond de n'importe quelle photo",
+    "longDescription": "Je supprime automatiquement le fond de tes images en conservant la qualité.",
+    "api": "/api/background",
+    "category": "image",
+    "featured": false,
+    "gradient": "from-indigo-500 to-purple-500"
+  }
+]
