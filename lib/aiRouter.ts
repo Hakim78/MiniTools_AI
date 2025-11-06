@@ -1,5 +1,5 @@
-import { LLMProvider, ProviderConfig, OptimizedPrompt } from '@/types/ai';
-import { callOpenAIChat, isOpenAIAvailable } from './openai';
+import { LLMProvider, ProviderConfig, OptimizedPrompt, AiMode } from '@/types/ai';
+import { callOpenAIChat, callOpenAIChatWithRole, isOpenAIAvailable, ModelTier } from './openai';
 
 /**
  * AI ROUTER - Multi-LLM Orchestrator
@@ -53,10 +53,34 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
 };
 
 /**
+ * Determine which model tier to use based on the AI mode
+ *
+ * Daily tools (rewrite, correct, summarize, reply) → SECONDARY_MODEL
+ * Premium tools (seo_generate, seo_rewrite) → PRIMARY_MODEL
+ */
+export function getModelTierForMode(mode: AiMode): ModelTier {
+  const premiumModes: AiMode[] = ['seo_generate', 'seo_rewrite'];
+  return premiumModes.includes(mode) ? 'primary' : 'secondary';
+}
+
+/**
  * Fonction principale : Route le prompt optimisé vers les LLM disponibles
  * et retourne la meilleure réponse (simple ou fusionnée)
+ *
+ * NEW: Now accepts mode and optional modelTier to use cost-aware routing
  */
-export async function routeToAI(optimizedPrompt: OptimizedPrompt): Promise<string> {
+export async function routeToAI(
+  optimizedPrompt: OptimizedPrompt,
+  options?: {
+    mode?: AiMode;
+    modelTier?: ModelTier;
+  }
+): Promise<string> {
+  // Determine model tier from mode if not explicitly provided
+  const modelTier = options?.modelTier || (options?.mode ? getModelTierForMode(options.mode) : 'secondary');
+
+  console.log(`🎯 Routing with model tier: ${modelTier}${options?.mode ? ` (mode: ${options.mode})` : ''}`);
+
   // 1. Récupérer les providers disponibles
   const availableProviders = getAvailableProviders();
 
@@ -68,11 +92,11 @@ export async function routeToAI(optimizedPrompt: OptimizedPrompt): Promise<strin
 
   // 2. Si un seul provider → l'utiliser directement
   if (availableProviders.length === 1) {
-    return await callProvider(availableProviders[0], optimizedPrompt);
+    return await callProvider(availableProviders[0], optimizedPrompt, modelTier);
   }
 
   // 3. Si plusieurs providers → stratégie "comité IA"
-  return await executeCommitteeStrategy(availableProviders, optimizedPrompt);
+  return await executeCommitteeStrategy(availableProviders, optimizedPrompt, modelTier);
 }
 
 /**
@@ -80,7 +104,8 @@ export async function routeToAI(optimizedPrompt: OptimizedPrompt): Promise<strin
  */
 async function executeCommitteeStrategy(
   providers: LLMProvider[],
-  optimizedPrompt: OptimizedPrompt
+  optimizedPrompt: OptimizedPrompt,
+  modelTier: ModelTier
 ): Promise<string> {
   try {
     // On prend max 3 providers pour ne pas exploser les coûts
@@ -90,7 +115,7 @@ async function executeCommitteeStrategy(
 
     // Appeler tous les providers en parallèle
     const responses = await Promise.allSettled(
-      selectedProviders.map((provider) => callProvider(provider, optimizedPrompt))
+      selectedProviders.map((provider) => callProvider(provider, optimizedPrompt, modelTier))
     );
 
     // Extraire les réponses réussies
@@ -169,13 +194,14 @@ Renvoie UNIQUEMENT la version finale synthétisée, sans introduction ni explica
 
 /**
  * Appelle un provider spécifique avec le prompt optimisé
+ * NEW: Now accepts modelTier to choose the right model
  */
-async function callProvider(provider: LLMProvider, optimizedPrompt: OptimizedPrompt): Promise<string> {
-  console.log(`📡 Appel du provider: ${PROVIDERS[provider].name}`);
+async function callProvider(provider: LLMProvider, optimizedPrompt: OptimizedPrompt, modelTier: ModelTier): Promise<string> {
+  console.log(`📡 Appel du provider: ${PROVIDERS[provider].name} (tier: ${modelTier})`);
 
   switch (provider) {
     case 'openai':
-      return await callOpenAI(optimizedPrompt);
+      return await callOpenAI(optimizedPrompt, modelTier);
 
     case 'gemini':
       return await callGemini(optimizedPrompt);
@@ -215,18 +241,24 @@ function getAvailableProviders(): LLMProvider[] {
 
 /**
  * OpenAI GPT - IMPLÉMENTATION COMPLÈTE
+ * NEW: Now uses callOpenAIChatWithRole with model tier for cost-aware routing
  */
-async function callOpenAI(optimizedPrompt: OptimizedPrompt): Promise<string> {
-  return await callOpenAIChat([
-    {
-      role: 'system',
-      content: optimizedPrompt.system,
-    },
-    {
-      role: 'user',
-      content: optimizedPrompt.user,
-    },
-  ]);
+async function callOpenAI(optimizedPrompt: OptimizedPrompt, modelTier: ModelTier): Promise<string> {
+  return await callOpenAIChatWithRole({
+    messages: [
+      {
+        role: 'system',
+        content: optimizedPrompt.system,
+      },
+      {
+        role: 'user',
+        content: optimizedPrompt.user,
+      },
+    ],
+    modelTier,
+    temperature: 0.7,
+    maxTokens: 4000,
+  });
 }
 
 /**
